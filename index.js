@@ -28,6 +28,23 @@ app.use(fileUpload({
 let H5PEditor;
 
 /**
+ * @type {Promise<H5PPlayer>}
+ */
+let H5PPlayer;
+
+async function loadH5PConfig() {
+    return await new H5P.H5PConfig(
+        new H5P.fsImplementations.JsonStorage(path.resolve('config/h5p.json'))
+    ).load()
+}
+
+const H5PLocalPath = {
+    libraries: new H5P.fsImplementations.FileLibraryStorage(path.resolve('public/h5p/libraries')),
+    temporary: new H5P.fsImplementations.DirectoryTemporaryFileStorage(path.resolve('public/h5p/temporary-storage')),
+    content: new H5P.fsImplementations.FileContentStorage(path.resolve('public/h5p/content'))
+}
+
+/**
  *
  * @returns {Promise<H5PEditor>}
  */
@@ -36,17 +53,33 @@ async function getHPEditor() {
         return H5PEditor;
     }
 
-    const config = await new H5P.H5PConfig(
-        new H5P.fsImplementations.JsonStorage(path.resolve('config/h5p.json'))
-    ).load();
+    const config = await loadH5PConfig();
 
     this.HP5Editor = H5P.fs(
         config,
-        path.resolve('public/h5p/libraries'),
-        path.resolve('public/h5p/temporary-storage'),
-        path.resolve('public/h5p/content')
+        H5PLocalPath.libraries,
+        H5PLocalPath.temporary,
+        H5PLocalPath.content
     )
     return this.HP5Editor.setRenderer((model) => model);
+}
+
+/**
+ *
+ * @returns {Promise<H5PPlayer>}
+ */
+async function getHPPlayer() {
+    if (H5PPlayer) {
+        return H5PPlayer;
+    }
+
+    const config = await loadH5PConfig();
+
+    return new H5P.H5PPlayer(
+        H5PLocalPath.libraries,
+        H5PLocalPath.content,
+        config
+    )
 }
 
 function user() {
@@ -77,6 +110,24 @@ app.use(express.static('./public/', {
     maxAge: 31536000000
 }))
 
+app.get('/h5p-editor/:contentId', async (req, res) => {
+
+    try {
+
+        const contentId = req.params.contentId;
+        console.log(contentId);
+        const editor = await getHPEditor();
+        const model = await editor.render(contentId);
+
+        res.send({model})
+
+    } catch (e) {
+        console.info(e)
+        res.send({error: e})
+    }
+})
+
+
 app.get('/h5p-editor', async (req, res) => {
 
     try {
@@ -84,7 +135,6 @@ app.get('/h5p-editor', async (req, res) => {
         const editor = await getHPEditor();
         const model = await editor.render();
 
-        // const metadata = await HP5Editor.getContent('new', {id: 10000, name: 'murage', type:'local' })
         res.send({model})
 
     } catch (e) {
@@ -143,13 +193,10 @@ app.post('/h5p/ajax', async (req, res) => {
         const body = req.body;
         const editor = await getHPEditor();
         const user1 = user();
-        const files = req.files && req.files.file ? req.files.file : undefined; // data?: Buffer;mimetype: string;name: string;size: number;tempFilePath?: string;
-
+        const files = req.files && req.files.file ? req.files.file : undefined;
         const translator = null; //(stringId: string, replacements: )=>string
 
         const libraryFile = req.files && req.files.h5p ? req.files.h5p : undefined; //library to upload
-
-        console.log('=====>',tmp.dirSync({keep: false, unsafeCleanup: true}));
 
         const result = await H5PEndpoint(editor)
             .postAjax(action, body, language, user1, files, id, translator, libraryFile);
@@ -174,7 +221,60 @@ app.post('/h5p/contentUserData', async (req, res) => {
     } catch (e) {
         res.status(400).send({error: e.message});
     }
+});
+
+
+app.post('/h5p/new', async (req, res) => {
+
+    try {
+
+        if (!req.body.params || !req.body.params.params ||
+            !req.body.params.metadata || !req.body.library) {
+            res.status(400).send('Malformed request');
+            return
+        }
+
+        const body = req.body;
+        const editor = await getHPEditor();
+        const user1 = user();
+
+
+        const result = await editor.saveOrUpdateContentReturnMetaData(
+            body.contentId || undefined,
+            body.params.params,
+            body.params.metadata,
+            body.library,
+            user1
+        );
+
+
+        res.status(200).send(result);
+
+    } catch (e) {
+        res.status(400).send({error: e.message});
+    }
+});
+
+
+app.get('/h5p-player/:contentId', async (req, res) => {
+
+    try {
+        const contentId = req.params.contentId;
+
+        const player = await getHPPlayer();
+
+        player.setRenderer((model => model));
+
+        const results = await player.render(contentId)
+
+        res.send({model: results})
+    } catch (e) {
+        console.log(e);
+        res.status(400).send({error: e.message});
+
+    }
 })
+
 
 app.get('**', (req, res) => {
 
