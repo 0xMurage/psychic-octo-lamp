@@ -39,9 +39,9 @@ async function loadH5PConfig() {
 }
 
 const H5PLocalPath = {
-    libraries: new H5P.fsImplementations.FileLibraryStorage(path.resolve('public/h5p/libraries')),
-    temporary: new H5P.fsImplementations.DirectoryTemporaryFileStorage(path.resolve('public/h5p/temporary-storage')),
-    content: new H5P.fsImplementations.FileContentStorage(path.resolve('public/h5p/content'))
+    libraries: path.resolve('public/h5p/libraries'),
+    temporary:path.resolve('public/h5p/temporary-storage'),
+    content: path.resolve('public/h5p/content')
 }
 
 /**
@@ -76,8 +76,8 @@ async function getHPPlayer() {
     const config = await loadH5PConfig();
 
     return new H5P.H5PPlayer(
-        H5PLocalPath.libraries,
-        H5PLocalPath.content,
+        new H5P.fsImplementations.FileLibraryStorage(H5PLocalPath.libraries),
+        new H5P.fsImplementations.FileContentStorage(H5PLocalPath.content),
         config
     )
 }
@@ -87,8 +87,8 @@ function user() {
         id: "10000",
         name: 'Martin Murage',
         type: 'local',
-        canCreateRestricted: true,
-        canInstallRecommended: true,
+        canCreateRestricted: false,
+        canInstallRecommended: false,
         canUpdateAndInstallLibraries: true
     }
 }
@@ -115,9 +115,27 @@ app.get('/h5p-editor/:contentId', async (req, res) => {
     try {
 
         const contentId = req.params.contentId;
-        console.log(contentId);
         const editor = await getHPEditor();
         const model = await editor.render(contentId);
+        const content= await editor.getContent(contentId,user());
+
+        //
+        res.send({model:{...model,metadata:content.h5p,library:content.library,params:content.params}})
+
+    } catch (e) {
+        console.info(e)
+        res.send({error: e})
+    }
+})
+
+app.get('/h5p-editor/:contentId', async (req, res) => {
+
+    try {
+
+        const contentEditor = req.params.contentId;
+
+        const editor = await getHPEditor();
+        const model = await editor.render(contentEditor);
 
         res.send({model})
 
@@ -144,26 +162,6 @@ app.get('/h5p-editor', async (req, res) => {
 
 })
 
-app.get('/h5p-editor/:contentId', async (req, res) => {
-
-    const config = await new H5P.H5PConfig(
-        new H5P.fsImplementations.JsonStorage(path.resolve('config/h5p.json'))
-    ).load();
-
-    const HP5Editor = H5P.fs(
-        config,
-        path.resolve('public/h5p/libraries'),
-        path.resolve('public/h5p/temporary-storage'),
-        path.resolve('public/h5p/content')
-    )
-
-    HP5Editor.setRenderer((model) => model);
-    const model = await HP5Editor.render()
-    const metadata = await HP5Editor.getContent(req.params.contentId,
-        {id: 10000, name: 'murage', type: 'local'});
-
-    res.send({model, metadata})
-})
 
 app.get('/h5p/ajax', async (req, res) => {
 
