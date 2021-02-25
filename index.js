@@ -39,7 +39,7 @@ async function loadH5PConfig() {
 
 const H5PLocalPath = {
     libraries: path.resolve('public/h5p/libraries'),
-``    temporary: path.resolve('public/h5p/temporary-storage'),
+    temporary: path.resolve('public/h5p/temporary-storage'),
     content: path.resolve('public/h5p/content')
 }
 
@@ -290,6 +290,50 @@ app.get('/h5p/content', async (req, res) => {
         }))
         res.send({data})
 
+    } catch (e) {
+        console.info(e)
+        res.send({error: e})
+    }
+
+})
+
+app.delete('/h5p/content/:contentId', async (req, res) => {
+
+    try {
+
+        const contentId = req.params.contentId;
+        const user1 = user();
+
+        const editor = await getHPEditor();
+
+        await editor.contentManager.deleteContent(contentId, user1);
+
+        res.send({status: ok, id: contentId})
+
+    } catch (e) {
+        console.info(e)
+        res.send({error: e})
+    }
+
+})
+
+
+app.get('/h5p/download/:contentId', async (req, res) => {
+
+    try {
+
+        const contentId = req.params.contentId;
+        const user1 = user();
+
+        const editor = await getHPEditor();
+
+
+        res.setHeader(
+            'Content-disposition',
+            `attachment; filename=${contentId}.h5p`
+        );
+
+        await H5PEndpoint(editor).getDownload(contentId, user1, res);
     } catch (e) {
         console.info(e)
         res.send({error: e})
