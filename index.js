@@ -39,7 +39,7 @@ async function loadH5PConfig() {
 
 const H5PLocalPath = {
     libraries: path.resolve('public/h5p/libraries'),
-    temporary:path.resolve('public/h5p/temporary-storage'),
+``    temporary: path.resolve('public/h5p/temporary-storage'),
     content: path.resolve('public/h5p/content')
 }
 
@@ -116,10 +116,10 @@ app.get('/h5p-editor/:contentId', async (req, res) => {
         const contentId = req.params.contentId;
         const editor = await getHPEditor();
         const model = await editor.render(contentId);
-        const content= await editor.getContent(contentId,user());
+        const content = await editor.getContent(contentId, user());
 
         //
-        res.send({model:{...model,metadata:content.h5p,library:content.library,params:content.params}})
+        res.send({model: {...model, metadata: content.h5p, library: content.library, params: content.params}})
 
     } catch (e) {
         console.info(e)
@@ -253,6 +253,48 @@ app.get('/h5p-player/:contentId', async (req, res) => {
         res.status(400).send({error: e.message});
 
     }
+})
+
+app.get('/h5p/content/:contentId', async (req, res) => {
+
+    try {
+
+        const contentId = req.params.contentId;
+        const user1 = user();
+
+        const editor = await getHPEditor();
+
+        const {title, language, license} = await editor.contentManager.getContentMetadata(contentId, user1);
+
+        res.send({contentId, title, language, license})
+
+    } catch (e) {
+        console.info(e)
+        res.send({error: e})
+    }
+
+})
+
+app.get('/h5p/content', async (req, res) => {
+
+    try {
+
+        const user1 = user();
+
+        const editor = await getHPEditor();
+        const contendIds = await editor.contentManager.listContent(user1);
+        const data = await Promise.all(contendIds.map(async (id) => {
+            const {title, language, license} = await editor.contentManager.getContentMetadata(id, user1);
+
+            return {id, title, language, license};
+        }))
+        res.send({data})
+
+    } catch (e) {
+        console.info(e)
+        res.send({error: e})
+    }
+
 })
 
 
