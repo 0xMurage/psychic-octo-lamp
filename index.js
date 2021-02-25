@@ -128,23 +128,6 @@ app.get('/h5p-editor/:contentId', async (req, res) => {
     }
 })
 
-app.get('/h5p-editor/:contentId', async (req, res) => {
-
-    try {
-
-        const contentEditor = req.params.contentId;
-
-        const editor = await getHPEditor();
-        const model = await editor.render(contentEditor);
-
-        res.send({model})
-
-    } catch (e) {
-        console.info(e)
-        res.send({error: e})
-    }
-})
-
 
 app.get('/h5p-editor', async (req, res) => {
 
