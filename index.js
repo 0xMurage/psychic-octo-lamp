@@ -16,7 +16,6 @@ app.use(bodyParser.urlencoded({extended: true}));
 
 
 app.use(fileUpload({
-    limits: {fileSize: 1048576000},
     useTempFiles: true,
     tempFileDir: tmp.dirSync({keep: false, unsafeCleanup: true}).name
 }));
