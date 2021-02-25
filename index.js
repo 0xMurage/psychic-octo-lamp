@@ -119,7 +119,7 @@ app.get('/h5p-editor/:contentId', async (req, res) => {
         const content = await editor.getContent(contentId, user());
 
         //
-        res.send({model: {...model, metadata: content.h5p, library: content.library, params: content.params}})
+        res.send({model: {...model, metadata: content.h5p, library: content.library, params: content.params.params}})
 
     } catch (e) {
         console.info(e)
@@ -266,7 +266,7 @@ app.get('/h5p/content/:contentId', async (req, res) => {
 
         const {title, language, license} = await editor.contentManager.getContentMetadata(contentId, user1);
 
-        res.send({contentId, title, language, license})
+        res.send({id:contentId, title, language, license})
 
     } catch (e) {
         console.info(e)
