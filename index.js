@@ -308,7 +308,7 @@ app.delete('/h5p/content/:contentId', async (req, res) => {
 
         await editor.contentManager.deleteContent(contentId, user1);
 
-        res.send({status: ok, id: contentId})
+        res.send({status: 'ok', id: contentId})
 
     } catch (e) {
         console.info(e)
