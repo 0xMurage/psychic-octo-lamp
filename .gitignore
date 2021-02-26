@@ -1,0 +1,4 @@
+node_modules
+public/h5p/libraries/
+public/h5p/temporary-storage/
+.idea/
